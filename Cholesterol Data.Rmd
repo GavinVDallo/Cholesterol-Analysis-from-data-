@@ -1,0 +1,56 @@
+---
+title: "Cholesterol Data"
+output: html_document
+date: "2026-04-29"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(tidyverse)
+library(rstatix)
+library(ggpubr)
+```
+
+## Data Preparation
+
+```{r data}
+# Manually creating the dataset from the provided table
+df <- data.frame(
+  id = factor(1:18),
+  Margarine = factor(c("B", "B", "B", "A", "B", "A", "B", "A", "B", "A", "B", "B", "A", "A", "A", "B", "A", "B")),
+  Before = c(6.42, 6.76, 6.56, 4.8, 8.43, 7.49, 8.05, 5.05, 5.77, 3.91, 6.77, 6.44, 6.17, 7.67, 7.34, 6.85, 5.13, 5.73),
+  After4weeks = c(5.83, 6.2, 5.83, 4.27, 7.71, 7.12, 7.25, 4.63, 5.31, 3.7, 6.15, 5.59, 5.56, 7.11, 6.84, 6.4, 4.52, 5.13),
+  After8weeks = c(5.75, 6.13, 5.71, 4.15, 7.67, 7.05, 7.1, 4.67, 5.33, 3.66, 5.96, 5.64, 5.51, 6.96, 6.82, 6.29, 4.45, 5.17)
+)
+
+# Convert to long format for ANOVA
+df_long <- df %>%
+  gather(key = "Time", value = "Cholesterol", Before, After4weeks, After8weeks) %>%
+  convert_as_factor(id, Time)
+
+# Reorder Time levels so they appear chronologically in plots
+df_long$Time <- factor(df_long$Time, levels = c("Before", "After4weeks", "After8weeks"))
+```
+
+## Mixed Model ANOVA
+
+```{r anova}
+# Two-way mixed ANOVA
+res.aov <- anova_test(
+  data = df_long, dv = Cholesterol, wid = id,
+  between = Margarine, within = Time
+)
+
+get_anova_table(res.aov)
+```
+
+## Visualization
+
+```{r plot}
+bxp <- ggline(df_long, x = "Time", y = "Cholesterol", color = "Margarine",
+       add = c("mean_se"),
+       palette = "jco") +
+  labs(title = "Cholesterol Change Over Time", subtitle = "Error bars: Mean +/- SE")
+
+bxp
+```
